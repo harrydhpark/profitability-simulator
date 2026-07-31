@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html class="light" lang="ko">
+<head>
+  <!-- Unified Auth Guard & SSO Handler -->
+  <script src="auth-guard.js"></script>
+  <script src="portal-topbar.js"></script>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>LGE Europe TV 선행 손익 시뮬레이터 Portal | Profitability Simulator</title>
+  
+  <!-- Tailwind CSS CDN with Plugins -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  
+  <!-- Google Fonts & Material Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700&family=Noto+Sans+KR:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  
+  <!-- Lucide Icons & Chart.js -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Preloaded Data & Engine -->
+  <script src="simulator_data.js"></script>
+  <script src="simulator_engine.js"></script>
+
+  <!-- Tailwind Configuration matching 09 선행수익성 Portal -->
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#051c2c",
+            "on-primary": "#ffffff",
+            "secondary": "#a50034",
+            "surface": "#f8fafc",
+            "surface-variant": "#ebf5ff",
+            "outline": "#73777d",
+            "outline-variant": "#c3c7cc",
+            "error": "#e11d48",
+            "background": "#ffffff"
+          },
+          fontFamily: {
+            headline: ['"Source Serif 4"', "serif"],
+            body: ["Inter", "Noto Sans KR", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f1f5f9; color: #0f172a; }
+    h1, h2, h3, h4, h5, h6 { font-family: 'Source Serif 4', serif; }
+    
+    /* Executive Excel Table Styling */
+    .excel-table-container { 
+      overflow-x: auto; 
+      position: relative; 
+      border-radius: 12px; 
+      border: 1px solid #cbd5e1; 
+      background: #ffffff; 
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+    }
+    .excel-table { 
+      border-collapse: collapse; 
+      table-layout: fixed;
+      width: max-content;
+      font-size: 12px; 
+      font-family: 'JetBrains Mono', monospace; 
+    }
+    .excel-table th, .excel-table td { 
+      border: 1px solid #cbd5e1; 
+      padding: 6px 10px; 
+      text-align: right; 
+      white-space: nowrap; 
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .excel-table th:not(.sticky-col),
+    .excel-table td:not(.sticky-col) {
+      width: 135px;
+      min-width: 135px;
+      max-width: 135px;
+    }
+    .excel-table th { 
+      background-color: #051c2c; 
+      color: #ffffff; 
+      font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+      font-weight: 700; 
+      text-align: center; 
+      padding: 8px 10px;
+      letter-spacing: 0.01em;
+      border-color: #1e3a5f;
+    }
+    .excel-table .sticky-col { 
+      position: sticky; 
+      left: 0; 
+      background-color: #ffffff; 
+      z-index: 10; 
+      font-weight: 700; 
+      text-align: left; 
+      border-right: 2px solid #94a3b8; 
+      font-family: 'Inter', 'Noto Sans KR', sans-serif;
+      width: 220px;
+      min-width: 220px;
+      max-width: 220px;
+    }
+    .excel-table th.sticky-col { background-color: #051c2c !important; color: #ffffff !important; text-align: center; border-right: 2px solid #1e3a5f; }
+    .excel-table tr:hover { background-color: #f8fafc; }
+    .excel-table .bg-section-header { background-color: #e2e8f0 !important; font-weight: 800; text-align: left; color: #0f172a; }
+    .excel-table .bg-total-col { background-color: #fef3c7 !important; font-weight: 800; border-left: 2px solid #d97706; }
+    .excel-table th.bg-total-col { background-color: #78350f !important; color: #ffffff !important; }
+
+    /* Number input arrow removal */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* Editable Input Cells */
+    .excel-table td:has(.excel-input) {
+      padding: 2px 6px;
+      text-align: center;
+    }
+    .excel-input {
+      background-color: #fefce8;
+      border: 1px solid #f59e0b;
+      color: #92400e;
+      font-weight: 700;
+      border-radius: 4px;
+      padding: 1px 4px;
+      text-align: center;
+      width: 84px;
+      height: 22px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      transition: all 0.15s ease-in-out;
+      box-sizing: border-box;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .excel-input:focus {
+      outline: none;
+      border-color: #d97706;
+      box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+      background-color: #ffffff;
+    }
+    .excel-input.changed {
+      background-color: #fef08a;
+      border-color: #b45309;
+      color: #78350f;
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="flex min-h-screen">
+
+  <!-- ==================== LEFT FIXED CONTROL SIDEBAR ==================== -->
+  <aside class="w-80 bg-primary text-white fixed h-screen flex flex-col z-50 shadow-2xl border-r border-white/10">
+    
+    <!-- Portal Header & Logo -->
+    <div class="p-5 border-b border-white/10 flex-shrink-0 bg-primary">
+      <div class="flex items-center gap-3 mb-1.5">
+        <div class="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center text-white font-bold text-sm shadow-inner font-mono">
+          TV
+        </div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight text-white leading-none">선행 손익 Simulator</h1>
+        </div>
+      </div>
+      <p class="text-[11px] text-white/60 font-medium mt-1">모델별 가격·차감율 수익성 시뮬레이터</p>
+    </div>
+
+    <!-- Step 1: Subsidiary Selector -->
+    <div class="p-4 border-b border-white/10 bg-white/5 space-y-3">
+      <div class="text-[10px] font-bold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-sm text-secondary">tune</span>
+        <span>1단계: 법인/지점 선택</span>
+      </div>
+
+      <div>
+        <label class="block text-[11px] text-white/70 mb-1 font-medium">법인/지점명</label>
+        <select id="subSelector" class="w-full bg-slate-900 border border-white/20 rounded-md px-2.5 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-secondary cursor-pointer">
+          <option value="AG">LGEAG (오스트리아)</option>
+          <option value="BN">LGEBN (베네룩스)</option>
+          <option value="CK">LGECZ (체코)</option>
+          <option value="DG">LGEDG (독일)</option>
+          <option value="ES">LGEES (스페인)</option>
+          <option value="FS">LGEFS (프랑스)</option>
+          <option value="HS">LGEHS (그리스)</option>
+          <option value="IS">LGEIS (이탈리아)</option>
+          <option value="LA">LGELA (발틱)</option>
+          <option value="MK">LGEMK (헝가리)</option>
+          <option value="PL">LGEPL (폴란드)</option>
+          <option value="PT">LGEPT (포르투갈)</option>
+          <option value="RO">LGERO (루마니아)</option>
+          <option value="SW">LGESW (스웨덴)</option>
+          <option value="Swiss">Swiss (스위스)</option>
+          <option value="UK" selected>LGEUK (영국)</option>
+        </select>
+      </div>
+    </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Model Selector Panel (Excel Slicers) -->
+    <div class="flex-1 p-4 flex flex-col min-h-0 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="text-[10px] font-bold text-white/50 uppercase tracking-wider flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-sm text-secondary">filter_alt</span>
+          <span>2단계: 시뮬레이션 모델 선택 필터</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button id="btnResetAllSlicers" class="text-[10px] text-white/60 hover:text-white flex items-center gap-0.5 bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded transition" title="모든 필터 기본값 복원">
+            <span class="material-symbols-outlined text-[12px]">restart_alt</span> 리셋
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable 6 Slicer Filter Cards Container -->
+      <div id="slicerFiltersContainer" class="flex-1 overflow-y-auto space-y-2.5 pr-1 font-sans text-xs">
+        <!-- Dynamically rendered 6 Slicer cards via app.js -->
+      </div>
+    </div>
+
+    <!-- POC Info Card -->
+    <div class="p-4 border-t border-white/10 bg-primary/80 flex flex-col gap-1 flex-shrink-0 font-sans">
+      <div class="text-[10px] font-bold text-white/40 uppercase tracking-wider">POC</div>
+      <div class="text-xs font-bold text-white leading-snug">Harry Park</div>
+      <div class="text-[11px] text-white/70 font-mono">harry.park@lge.com</div>
+    </div>
+
+  </aside>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="ml-80 flex-1 min-h-screen bg-slate-100 flex flex-col">
+    
+    <!-- Top Executive Header Bar -->
+    <header class="bg-white border-b border-slate-200 px-6 py-2.5 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-3 sticky top-0 z-40">
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 id="pageSubTitle" class="text-xl font-bold text-slate-900 font-headline">LGEUK (영국) TV 손익 시뮬레이션</h2>
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">엑셀 Simulator 시트 구조 반영 · 모델별 가격 및 비용 요소를 조절하여 수익성 변동을 시뮬레이션합니다.</p>
+      </div>
+
+      <!-- Presets & Actions -->
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-300">
+          <button id="btnPresetPricePlus5" class="px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-50 rounded transition" title="선택 모델 가격 +5% 상승">+5% 가격</button>
+          <button id="btnPresetPriceMinus5" class="px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-50 rounded transition" title="선택 모델 가격 -5% 인하">-5% 가격</button>
+          <button id="btnPresetDeductionMinus1" class="px-2.5 py-1 text-xs font-bold text-sky-700 hover:bg-sky-50 rounded transition" title="차감율 -1%p 인하">-1%p 차감</button>
+          <button id="btnPresetReset" class="px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-white rounded transition flex items-center gap-1">
+            <span class="material-symbols-outlined text-xs">restart_alt</span> 초기화
+          </button>
+        </div>
+
+        <button id="btnExportCSV" class="flex items-center gap-1.5 bg-secondary hover:bg-rose-800 text-white font-bold text-xs px-3.5 py-2 rounded-lg shadow transition">
+          <span class="material-symbols-outlined text-sm">download</span> Export CSV
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Content -->
+    <div class="px-6 py-3 space-y-2.5 flex-1">
+
+      <!-- View Mode 1: Excel Simulator Matrix View Container -->
+      <section id="viewMatrixContainer" class="space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <h3 class="text-base font-bold text-slate-900 font-headline flex items-center gap-2">
+              <span class="w-1.5 h-4 bg-secondary rounded-sm"></span>
+              TV 수익성 시뮬레이션 매트릭스
+            </h3>
+            <span class="text-xs text-slate-500">(가로: 선택된 모델 / 세로: 가격·비용 요소 & 손익 지표)</span>
+          </div>
+          <div class="text-xs text-slate-500 flex items-center gap-3">
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-100 border border-amber-400"></span> 입력 셀</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-100 border border-emerald-400"></span> 이익 개선</span>
+            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-rose-100 border border-rose-400"></span> 이익 악화</span>
+          </div>
+        </div>
+
+        <div class="excel-table-container max-h-[calc(100vh-140px)] overflow-y-auto">
+          <table class="excel-table" id="matrixTable">
+            <thead id="matrixHeader">
+              <!-- Dynamically rendered via app.js -->
+            </thead>
+            <tbody id="matrixBody">
+              <!-- Dynamically rendered via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- View Mode 2: Model List Table View Container (Hidden by default) -->
+      <section id="viewListContainer" class="space-y-2 hidden">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-slate-900 font-headline flex items-center gap-2">
+            <span class="w-1.5 h-4 bg-primary rounded-sm"></span>
+            모델별 손익 세로 목록 테이블 뷰
+          </h3>
+        </div>
+
+        <div class="excel-table-container max-h-[calc(100vh-140px)] overflow-y-auto">
+          <table class="excel-table">
+            <thead>
+              <tr>
+                <th class="text-left">모델명</th>
+                <th class="text-left">BLU / 시리즈</th>
+                <th>Simul. G. Price</th>
+                <th>Simul. 차감율 (%)</th>
+                <th>N.Price ($)</th>
+                <th>COGS ($)</th>
+                <th>영업이익 ($)</th>
+                <th>COI %</th>
+                <th>영업이익 Gap ($)</th>
+              </tr>
+            </thead>
+            <tbody id="listTableBody">
+              <!-- Dynamically rendered via app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-1.5 px-6 text-center text-[11px] text-slate-500">
+      <div class="flex items-center justify-between max-w-[1800px] mx-auto">
+        <span>LGE Europe TV AX Task &copy; 2026 Profitability Simulator</span>
+        <span class="font-mono">Engine: In-Memory Excel Matrix Recalculation Engine</span>
+      </div>
+    </footer>
+
+  </main>
+
+  <!-- Application Script -->
+  <script src="app.js"></script>
+</body>
+</html>

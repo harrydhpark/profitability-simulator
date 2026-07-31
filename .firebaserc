@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "lge-advance-profitability-2026"
+  },
+  "targets": {
+    "lge-advance-profitability-2026": {
+      "hosting": {
+        "profitability-simulator": [
+          "lge-profitability-simulator-2026"
+        ]
+      }
+    }
+  }
+}
