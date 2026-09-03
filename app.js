@@ -111,12 +111,9 @@ document.addEventListener('DOMContentLoaded', () => {
     state.slicerState.sinModel = new Set(['신모델']);
     state.slicerState.blu = new Set(['OLED']);
 
-    // Multi-select defaults: all inch and month options
-    const inchGroup = SLICER_GROUPS.find(g => g.key === 'inch');
-    const monthsGroup = SLICER_GROUPS.find(g => g.key === 'months');
-
-    state.slicerState.inch = new Set(inchGroup ? inchGroup.options : ['98', '97', '86', '85', '83', '77', '75', '65', '55', '50', '48', '43']);
-    state.slicerState.months = new Set(monthsGroup ? monthsGroup.options : ['7월', '8월', '9월', '10월', '11월', '12월']);
+    // Multi-select defaults: unselected by default
+    state.slicerState.inch = new Set();
+    state.slicerState.months = new Set();
 
     updateSelectedModelsFromSlicers();
     renderSlicerFilters();
@@ -124,6 +121,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Derive Selected Models from Slicers
   function updateSelectedModelsFromSlicers() {
+    // If no inch is selected, display 0 models (wait for user selection)
+    if (state.slicerState.inch.size === 0) {
+      state.selectedModels = [];
+      return;
+    }
+
     const matched = DATA.models.filter(m => {
       const matchSin = state.slicerState.sinModel.size === 0 || state.slicerState.sinModel.has(m.sinModel);
       const matchBlu = state.slicerState.blu.size === 0 || state.slicerState.blu.has(m.blu);
@@ -331,6 +334,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Mode 1: Render Excel Simulator Matrix View (Models as Columns, PnL Metrics as Rows)
   function renderMatrixView(summary, models) {
+    if (models.length === 0) {
+      matrixHeader.innerHTML = `
+        <tr>
+          <th class="sticky-col w-[220px] min-w-[220px] max-w-[220px]">구분 / 손익지표 (PnL Metric)</th>
+          <th class="w-full text-center text-slate-400 font-normal py-3">선택된 인치(모델) 없음</th>
+        </tr>
+      `;
+      matrixBody.innerHTML = `
+        <tr>
+          <td colspan="2" class="p-12 text-center bg-white">
+            <div class="flex flex-col items-center justify-center gap-2 max-w-md mx-auto py-8">
+              <span class="material-symbols-outlined text-4xl text-slate-300">tv</span>
+              <p class="text-sm font-bold text-slate-700">선택된 인치가 없습니다.</p>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                좌측 사이드바의 <strong class="text-secondary font-bold">'인치 (다중 선택)'</strong>에서 원하시는 화면 크기를 클릭하시면 해당 모델의 손익 시뮬레이션 매트릭스가 표출됩니다.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
     // Header Row: Sticky Metric Label + Model Columns + Total Column
     let headerHtml = `
       <tr>
@@ -623,6 +649,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Mode 2: Render Model List Table View
   function renderListView(models) {
     listTableBody.innerHTML = '';
+    if (models.length === 0) {
+      listTableBody.innerHTML = `
+        <tr>
+          <td colspan="13" class="p-12 text-center bg-white">
+            <div class="flex flex-col items-center justify-center gap-2 max-w-md mx-auto py-8">
+              <span class="material-symbols-outlined text-4xl text-slate-300">tv</span>
+              <p class="text-sm font-bold text-slate-700">선택된 인치가 없습니다.</p>
+              <p class="text-xs text-slate-500 leading-relaxed">
+                좌측 사이드바의 <strong class="text-secondary font-bold">'인치 (다중 선택)'</strong>에서 원하시는 화면 크기를 클릭하시면 해당 모델 목록이 표출됩니다.
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
     models.forEach(m => {
       const tr = document.createElement('tr');
       tr.innerHTML = `

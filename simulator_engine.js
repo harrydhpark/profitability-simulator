@@ -25,8 +25,8 @@
 
     const subPnl = data.pnlData[subCode] || {};
 
-    // Filter model list if specified
-    const activeModels = (selectedModelNames && selectedModelNames.length > 0)
+    // Filter model list if specified (supports empty array for 0 models selection)
+    const activeModels = Array.isArray(selectedModelNames)
       ? data.models.filter(m => selectedModelNames.includes(m.modelName))
       : data.models;
 
