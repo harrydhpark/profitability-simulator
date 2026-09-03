@@ -170,10 +170,17 @@
         ? Number(ovr.fmPromo)
         : 0.10;
 
-      // Estimated Retail & Promo prices in Local Currency
-      // Formula: (Simul. Price Local * (1 + VAT)) / (1 - Margin%)
-      const estRrpLocal = (fmRrp < 1) ? (simGPriceLocal * (1 + vatRate)) / (1 - fmRrp) : 0;
-      const estPromoLocal = (fmPromo < 1) ? (simGPriceLocal * (1 + vatRate)) / (1 - fmPromo) : 0;
+      // Baseline Estimated Retail & Promo prices (Section 1: 선행 기준)
+      const baseEstRrpLocal = (fmRrp < 1) ? (baseGAspLocal * (1 + vatRate)) / (1 - fmRrp) : 0;
+      const baseEstPromoLocal = (fmPromo < 1) ? (baseGAspLocal * (1 + vatRate)) / (1 - fmPromo) : 0;
+
+      // Simulated Estimated Retail & Promo prices (Section 2: 시뮬레이션 기준)
+      const simEstRrpLocal = (fmRrp < 1) ? (simGPriceLocal * (1 + vatRate)) / (1 - fmRrp) : 0;
+      const simEstPromoLocal = (fmPromo < 1) ? (simGPriceLocal * (1 + vatRate)) / (1 - fmPromo) : 0;
+
+      // Keep estRrpLocal and estPromoLocal for backward compatibility (pointing to simulation values)
+      const estRrpLocal = simEstRrpLocal;
+      const estPromoLocal = simEstPromoLocal;
 
       const res = {
         modelName,
@@ -193,6 +200,10 @@
         guidePromoEur: base.guide?.promoGuide || null,
         fmRrp,
         fmPromo,
+        baseEstRrpLocal,
+        baseEstPromoLocal,
+        simEstRrpLocal,
+        simEstPromoLocal,
         estRrpLocal,
         estPromoLocal,
 

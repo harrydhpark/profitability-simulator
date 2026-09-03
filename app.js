@@ -375,13 +375,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // SECTION 1: 선행 수익성 기준 정보
     addSectionHeader('1. 선행 수익성 기준 정보');
 
-    // 1 & 2. Auto-calculated Expected RRP & Promo Prices (Top of Section 1)
+    // 1 & 2. Auto-calculated Baseline Expected RRP & Promo Prices (Top of Section 1)
     addMetricRow('예상 RRP', m => {
-      const val = Math.round(m.estRrpLocal).toLocaleString();
+      const val = Math.round(m.baseEstRrpLocal || m.estRrpLocal).toLocaleString();
       return `<strong class="text-slate-900">${val}</strong> <span class="text-[10px] text-slate-500">(${m.currency})</span>`;
     });
     addMetricRow('예상 Promo. Price', m => {
-      const val = Math.round(m.estPromoLocal).toLocaleString();
+      const val = Math.round(m.baseEstPromoLocal || m.estPromoLocal).toLocaleString();
       return `<strong class="text-slate-900">${val}</strong> <span class="text-[10px] text-slate-500">(${m.currency})</span>`;
     });
 
@@ -439,12 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1 & 2. Auto-calculated Expected RRP & Promo Prices for Simulation (Above Simul. G. Price)
     addMetricRow('예상 RRP', m => {
-      const val = Math.round(m.estRrpLocal).toLocaleString();
-      return `<strong class="text-slate-900">${val}</strong> <span class="text-[10px] text-slate-500">(${m.currency})</span>`;
+      const val = Math.round(m.simEstRrpLocal || m.estRrpLocal).toLocaleString();
+      return `<strong class="text-slate-900" data-metric="simRrp" data-model="${m.modelName}">${val}</strong> <span class="text-[10px] text-slate-500">(${m.currency})</span>`;
     });
     addMetricRow('예상 Promo. Price', m => {
-      const val = Math.round(m.estPromoLocal).toLocaleString();
-      return `<strong class="text-slate-900">${val}</strong> <span class="text-[10px] text-slate-500">(${m.currency})</span>`;
+      const val = Math.round(m.simEstPromoLocal || m.estPromoLocal).toLocaleString();
+      return `<strong class="text-slate-900" data-metric="simPromo" data-model="${m.modelName}">${val}</strong> <span class="text-[10px] text-slate-500">(${m.currency})</span>`;
     });
 
     // 3. Editable Simul. G. Price Input Row (Formerly Simul. Price (Local))
@@ -546,6 +546,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Attach Event Listeners to Matrix Excel Input fields
     matrixBody.querySelectorAll('.excel-input').forEach(input => {
+      // Real-time live calculation for Section 2 estimated RRP / Promo on typing in Simul. G. Price or F. Margin
+      input.addEventListener('input', (e) => {
+        const modelName = e.target.getAttribute('data-model');
+        const field = e.target.getAttribute('data-field');
+        const val = parseFloat(e.target.value);
+        const m = models.find(item => item.modelName === modelName);
+        if (!m) return;
+
+        const vat = m.vatRate;
+
+        if (field === 'price') {
+          const newPrice = isNaN(val) ? m.baseGAspLocal : val;
+          const fmRrp = (state.overrides[modelName]?.fmRrp !== undefined) ? state.overrides[modelName].fmRrp : m.fmRrp;
+          const fmPromo = (state.overrides[modelName]?.fmPromo !== undefined) ? state.overrides[modelName].fmPromo : m.fmPromo;
+
+          const newRrp = (fmRrp < 1) ? Math.round((newPrice * (1 + vat)) / (1 - fmRrp)) : 0;
+          const newPromo = (fmPromo < 1) ? Math.round((newPrice * (1 + vat)) / (1 - fmPromo)) : 0;
+
+          const rrpCell = matrixBody.querySelector(`strong[data-metric="simRrp"][data-model="${modelName}"]`);
+          const promoCell = matrixBody.querySelector(`strong[data-metric="simPromo"][data-model="${modelName}"]`);
+          if (rrpCell) rrpCell.textContent = newRrp.toLocaleString();
+          if (promoCell) promoCell.textContent = newPromo.toLocaleString();
+        } else if (field === 'fmRrp') {
+          const newFm = isNaN(val) ? 0.25 : (val / 100);
+          const currSimPrice = (state.overrides[modelName]?.promoPrice !== undefined) ? state.overrides[modelName].promoPrice : m.simGPriceLocal;
+          const newRrp = (newFm < 1) ? Math.round((currSimPrice * (1 + vat)) / (1 - newFm)) : 0;
+          const rrpCell = matrixBody.querySelector(`strong[data-metric="simRrp"][data-model="${modelName}"]`);
+          if (rrpCell) rrpCell.textContent = newRrp.toLocaleString();
+        } else if (field === 'fmPromo') {
+          const newFm = isNaN(val) ? 0.10 : (val / 100);
+          const currSimPrice = (state.overrides[modelName]?.promoPrice !== undefined) ? state.overrides[modelName].promoPrice : m.simGPriceLocal;
+          const newPromo = (newFm < 1) ? Math.round((currSimPrice * (1 + vat)) / (1 - newFm)) : 0;
+          const promoCell = matrixBody.querySelector(`strong[data-metric="simPromo"][data-model="${modelName}"]`);
+          if (promoCell) promoCell.textContent = newPromo.toLocaleString();
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.target.blur();
+        }
+      });
+
       input.addEventListener('change', (e) => {
         const modelName = e.target.getAttribute('data-model');
         const field = e.target.getAttribute('data-field');
@@ -565,7 +608,14 @@ document.addEventListener('DOMContentLoaded', () => {
           state.overrides[modelName].fmPromo = isNaN(val) ? null : (val / 100);
         }
 
+        const activeModel = modelName;
+        const activeField = field;
+
         updateDashboard();
+
+        // Restore focus smoothly so user can keep interacting seamlessly
+        const reFocused = matrixBody.querySelector(`.excel-input[data-model="${activeModel}"][data-field="${activeField}"]`);
+        if (reFocused) reFocused.focus();
       });
     });
   }
@@ -597,6 +647,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     listTableBody.querySelectorAll('.excel-input').forEach(input => {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.target.blur();
+      });
+
       input.addEventListener('change', (e) => {
         const modelName = e.target.getAttribute('data-model');
         const field = e.target.getAttribute('data-field');
@@ -607,7 +661,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (field === 'price') state.overrides[modelName].promoPrice = isNaN(val) ? null : val;
         else if (field === 'deduction') state.overrides[modelName].deductionRate = isNaN(val) ? null : (val / 100);
 
+        const activeModel = modelName;
+        const activeField = field;
+
         updateDashboard();
+
+        const reFocused = listTableBody.querySelector(`.excel-input[data-model="${activeModel}"][data-field="${activeField}"]`);
+        if (reFocused) reFocused.focus();
       });
     });
   }
