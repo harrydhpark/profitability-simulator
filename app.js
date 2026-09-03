@@ -380,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isFirstSection) {
           tr.innerHTML = `
             <td class="bg-section-header sticky-col font-bold">${title}</td>
-            <td rowspan="35" class="empty-matrix-guide p-8 text-center bg-slate-50/50 align-middle">
+            <td rowspan="29" class="empty-matrix-guide p-8 text-center bg-slate-50/50 align-middle min-w-[450px] w-full">
               <div class="flex flex-col items-center justify-center gap-3 max-w-md mx-auto py-12">
                 <div class="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-secondary">
                   <span class="material-symbols-outlined text-3xl">tune</span>
