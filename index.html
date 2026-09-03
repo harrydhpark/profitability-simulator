@@ -20,8 +20,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <!-- Preloaded Data & Engine -->
-  <script src="simulator_data.js?v=20260903_v3"></script>
-  <script src="simulator_engine.js?v=20260903_v3"></script>
+  <script src="simulator_data.js?v=20260903_v4"></script>
+  <script src="simulator_engine.js?v=20260903_v4"></script>
 
   <!-- Tailwind Configuration matching 09 선행수익성 Portal -->
   <script id="tailwind-config">
@@ -78,11 +78,20 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .excel-table th:not(.sticky-col),
-    .excel-table td:not(.sticky-col) {
+    .excel-table:not(.is-empty) th:not(.sticky-col),
+    .excel-table:not(.is-empty) td:not(.sticky-col) {
       width: 135px;
       min-width: 135px;
       max-width: 135px;
+    }
+    .excel-table.is-empty {
+      width: 100%;
+    }
+    .excel-table.is-empty td.empty-matrix-guide {
+      width: auto;
+      max-width: none;
+      white-space: normal;
+      border-left: 1px solid #cbd5e1;
     }
     .excel-table th { 
       background-color: #051c2c; 
@@ -343,6 +352,6 @@
   </main>
 
   <!-- Application Script -->
-  <script src="app.js?v=20260903_v3"></script>
+  <script src="app.js?v=20260903_v4"></script>
 </body>
 </html>

@@ -334,27 +334,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Mode 1: Render Excel Simulator Matrix View (Models as Columns, PnL Metrics as Rows)
   function renderMatrixView(summary, models) {
-    if (models.length === 0) {
-      matrixHeader.innerHTML = `
-        <tr>
-          <th class="sticky-col w-[220px] min-w-[220px] max-w-[220px]">구분 / 손익지표 (PnL Metric)</th>
-          <th class="w-full text-center text-slate-400 font-normal py-3">선택된 인치(모델) 없음</th>
-        </tr>
-      `;
-      matrixBody.innerHTML = `
-        <tr>
-          <td colspan="2" class="p-12 text-center bg-white">
-            <div class="flex flex-col items-center justify-center gap-2 max-w-md mx-auto py-8">
-              <span class="material-symbols-outlined text-4xl text-slate-300">tv</span>
-              <p class="text-sm font-bold text-slate-700">선택된 인치가 없습니다.</p>
-              <p class="text-xs text-slate-500 leading-relaxed">
-                좌측 사이드바의 <strong class="text-secondary font-bold">'인치 (다중 선택)'</strong>에서 원하시는 화면 크기를 클릭하시면 해당 모델의 손익 시뮬레이션 매트릭스가 표출됩니다.
-              </p>
-            </div>
-          </td>
-        </tr>
-      `;
-      return;
+    const isZeroModels = models.length === 0;
+
+    if (isZeroModels) {
+      matrixTable.classList.add('is-empty');
+    } else {
+      matrixTable.classList.remove('is-empty');
     }
 
     // Header Row: Sticky Metric Label + Model Columns + Total Column
@@ -362,24 +347,64 @@ document.addEventListener('DOMContentLoaded', () => {
       <tr>
         <th class="sticky-col w-[220px] min-w-[220px] max-w-[220px]">구분 / 손익지표 (PnL Metric)</th>
     `;
-    models.forEach(m => {
+    if (isZeroModels) {
       headerHtml += `
-        <th class="w-[135px] min-w-[135px] max-w-[135px]">
-          <span class="block text-white font-bold text-xs truncate">${m.modelName}</span>
-          <span class="block text-[10px] text-white/60 font-normal truncate">${m.blu} · ${m.series} (${m.inch}")</span>
+        <th class="text-center text-white/90 font-semibold py-3 bg-slate-900 border-l border-white/10">
+          <span class="flex items-center justify-center gap-1.5 text-xs">
+            <span class="material-symbols-outlined text-sm text-amber-400">tune</span>
+            시뮬레이션 대상 모델 (좌측 사이드바에서 인치 및 월을 선택하세요)
+          </span>
         </th>
       `;
-    });
+    } else {
+      models.forEach(m => {
+        headerHtml += `
+          <th class="w-[135px] min-w-[135px] max-w-[135px]">
+            <span class="block text-white font-bold text-xs truncate">${m.modelName}</span>
+            <span class="block text-[10px] text-white/60 font-normal truncate">${m.blu} · ${m.series} (${m.inch}")</span>
+          </th>
+        `;
+      });
+    }
     headerHtml += `</tr>`;
     matrixHeader.innerHTML = headerHtml;
 
     // Build Rows matching Excel 'Simulator' Sheet Structure
     matrixBody.innerHTML = '';
+    let isFirstSection = true;
 
     // Helper row generator
     const addSectionHeader = (title) => {
       const tr = document.createElement('tr');
-      tr.innerHTML = `<td colspan="${models.length + 1}" class="bg-section-header sticky-col font-bold">${title}</td>`;
+      if (isZeroModels) {
+        if (isFirstSection) {
+          tr.innerHTML = `
+            <td class="bg-section-header sticky-col font-bold">${title}</td>
+            <td rowspan="35" class="empty-matrix-guide p-8 text-center bg-slate-50/50 align-middle">
+              <div class="flex flex-col items-center justify-center gap-3 max-w-md mx-auto py-12">
+                <div class="w-14 h-14 rounded-2xl bg-white shadow-sm border border-slate-200 flex items-center justify-center text-secondary">
+                  <span class="material-symbols-outlined text-3xl">tune</span>
+                </div>
+                <h3 class="text-base font-bold text-slate-800">시뮬레이션을 위한 인치와 월을 선택해 주세요</h3>
+                <p class="text-xs text-slate-500 leading-relaxed text-center">
+                  좌측 사이드바의 <strong class="text-secondary font-bold">'인치 (다중 선택)'</strong> 및 <strong class="text-secondary font-bold">'월 (다중 선택)'</strong> 필터에서<br/>
+                  원하시는 화면 크기와 대상 월을 클릭하시면<br/>
+                  해당 모델의 실시간 손익 시뮬레이션 매트릭스가 표출됩니다.
+                </p>
+                <div class="flex items-center gap-2 mt-2 px-3.5 py-1.5 rounded-lg bg-surface-variant text-primary text-[11px] font-medium border border-blue-100">
+                  <span class="material-symbols-outlined text-xs">info</span>
+                  <span>인치를 선택하시면 모델별 출하가·차감율 입력창이 즉시 생성됩니다.</span>
+                </div>
+              </div>
+            </td>
+          `;
+          isFirstSection = false;
+        } else {
+          tr.innerHTML = `<td class="bg-section-header sticky-col font-bold">${title}</td>`;
+        }
+      } else {
+        tr.innerHTML = `<td colspan="${models.length + 1}" class="bg-section-header sticky-col font-bold">${title}</td>`;
+      }
       matrixBody.appendChild(tr);
     };
 
@@ -389,10 +414,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let rowHtml = `<td class="sticky-col ${options.isBold ? 'font-bold text-slate-900' : 'text-slate-700'}">${label}</td>`;
       
-      models.forEach(m => {
-        const cellContent = getValFn(m);
-        rowHtml += `<td>${cellContent}</td>`;
-      });
+      if (!isZeroModels) {
+        models.forEach(m => {
+          const cellContent = getValFn(m);
+          rowHtml += `<td>${cellContent}</td>`;
+        });
+      }
 
       tr.innerHTML = rowHtml;
       matrixBody.appendChild(tr);
